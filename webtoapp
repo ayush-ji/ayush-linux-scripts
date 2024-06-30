@@ -1,5 +1,6 @@
 #!/bin/bash
 
+#Check if script has root permissions or not
 if [ "$UID" -eq 0 ]; then
     echo "You are running as root."
 else
@@ -7,9 +8,14 @@ else
     exit 1
 fi
 
+#This script uses brave to run websites in app mode.
+#Brave as well as several other chromium based browsers support app mode out-of-the-box.
+#Future releases will offer support for more browsers.
+#Check if Brave is installed or not.
+
 echo "Checking if Brave Browser is installed or not..."
 
-isinstalled=$(rpm -q "brave-browser-beta" | awk '{print $1}')
+isinstalled=$(rpm -q "brave-browser" | awk '{print $1}')
 
 if [[ "$isinstalled" == "package" ]]; then
   echo "Looks like Brave Browser is not installed."
@@ -25,24 +31,22 @@ if [[ "$isinstalled" == "package" ]]; then
 
     # Add Brave Browser repository
     echo "Adding Brave Browser repository..."
-    dnf config-manager --add-repo https://brave-browser-rpm-beta.s3.brave.com/brave-browser-beta.repo
+    sudo dnf config-manager --add-repo https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
 
     # Import Brave Browser repository GPG key
     echo "Importing Brave Browser GPG key..."
-    rpm --import https://brave-browser-rpm-beta.s3.brave.com/brave-core-nightly.asc
+    sudo rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc
 
-    # Install Brave Browser beta
-    echo "Installing Brave Browser beta..."
-    dnf install -y brave-browser-beta
+    # Install Brave Browser
+    echo "Installing Brave Browser..."
+    dnf install -y brave-browser
 
-    echo "Brave Browser beta installation completed."
+    echo "Brave Browser installation completed."
   else
     echo "Installation aborted."
     exit 1
   fi
 fi
-
-echo "Thank you for checking Brave Browser."
 
 echo -n "Enter the web address: "
 read webadd
@@ -60,6 +64,7 @@ echo -n "Does this application require terminal? [Y/N]: "
 read ans
 ans=$(echo "$ans" | tr '[:lower:]' '[:upper:]' | cut -c1 )
 
+#Setting up terminal variable.
 if [[ "$ans" == "Y" ]]; then
   ans="true"
 else
@@ -69,8 +74,8 @@ fi
 echo -n "Enter categories of app (separated by spaces): "
 read -a categories
 
+#categories are stored in .desktop file with commas in between each field
 finalcat=""
-
 for category in "${categories[@]}"
 do
   finalcat="$finalcat,$category"
@@ -82,14 +87,17 @@ finalcat=$(echo "$finalcat" | sed 's/^,//')
 #Adding the Icon to Icon folder
 mv "$iconlocation" "/usr/share/pixmaps/$nameofapp.png"
 
+#DEBUG CODE
+#echo "Web address: $webadd"
+#echo "Name of application: $nameofapp"
+#echo "Comment: $comment"
+#echo "Icon location: $iconlocation"
+#echo "Require terminal: $ans"
+#echo "Categories: $finalcat"
 
-echo "Web address: $webadd"
-echo "Name of application: $nameofapp"
-echo "Comment: $comment"
-echo "Icon location: $iconlocation"
-echo "Require terminal: $ans"
-echo "Categories: $finalcat"
 
+#creation of .desktop entry for webapp.
+#TO-DO - Check if the file exist and make changes accordingly
 echo "[Desktop Entry]" >> "/usr/share/applications/$nameofapp.desktop"
 echo "Name=$nameofapp" >> "/usr/share/applications/$nameofapp.desktop"
 echo "Comment=$comment" >> "/usr/share/applications/$nameofapp.desktop"
@@ -98,5 +106,6 @@ echo "Icon=$nameofapp" >> "/usr/share/applications/$nameofapp.desktop"
 echo "Terminal=$ans" >> "/usr/share/applications/$nameofapp.desktop"
 echo "Type=Application" >> "/usr/share/applications/$nameofapp.desktop"
 echo "Categories=$finalcat" >> "/usr/share/applications/$nameofapp.desktop"
-
+echo "#do_not_edit_last_line_webtoapp_looks_for_it_in_order_to_make_changes" >> "/usr/share/applications/$nameofapp.desktop"
+echo "#installed_by_webtoapp" >> "/usr/share/applications/$nameofapp.desktop"
 
