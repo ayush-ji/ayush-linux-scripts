@@ -1,51 +1,49 @@
 #!/bin/bash
 
-#Check if script has root permissions or not
-if [ "$UID" -eq 0 ]; then
-    echo "You are running as root."
-else
+# Check if script has root permissions or not
+if [ "$UID" -ne 0 ]; then
     echo "You are not running as root."
     exit 1
 fi
 
-#This script uses brave to run websites in app mode.
-#Brave as well as several other chromium based browsers support app mode out-of-the-box.
-#Future releases will offer support for more browsers.
-#Check if Brave is installed or not.
+# This script uses Brave to run websites in app mode.
+# Brave as well as several other chromium-based browsers support app mode out-of-the-box.
+# Future releases will offer support for more browsers.
+# Check if Brave is installed or not.
 
 echo "Checking if Brave Browser is installed or not..."
 
 isinstalled=$(rpm -q "brave-browser" | awk '{print $1}')
 
 if [[ "$isinstalled" == "package" ]]; then
-  echo "Looks like Brave Browser is not installed."
-  echo -n "Do you wish to install Brave Browser? Yes/No: "
-  read yesno
-  
-  yesno=$(echo "$yesno" | tr '[:lower:]' '[:upper:]' | cut -c1 )
-  
-  if [[ "$yesno" == "Y" ]]; then
-    # Install dnf plugins core
-    echo "Installing dnf-plugins-core..."
-    dnf install -y dnf-plugins-core
+    echo "Looks like Brave Browser is not installed."
+    echo -n "Do you wish to install Brave Browser? Yes/No: "
+    read yesno
 
-    # Add Brave Browser repository
-    echo "Adding Brave Browser repository..."
-    sudo dnf config-manager --add-repo https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
+    yesno=$(echo "$yesno" | tr '[:lower:]' '[:upper:]' | cut -c1)
 
-    # Import Brave Browser repository GPG key
-    echo "Importing Brave Browser GPG key..."
-    sudo rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc
+    if [[ "$yesno" == "Y" ]]; then
+        # Install dnf plugins core
+        echo "Installing dnf-plugins-core..."
+        dnf install -y dnf-plugins-core
 
-    # Install Brave Browser
-    echo "Installing Brave Browser..."
-    dnf install -y brave-browser
+        # Add Brave Browser repository
+        echo "Adding Brave Browser repository..."
+        sudo dnf config-manager --add-repo https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
 
-    echo "Brave Browser installation completed."
-  else
-    echo "Installation aborted."
-    exit 1
-  fi
+        # Import Brave Browser repository GPG key
+        echo "Importing Brave Browser GPG key..."
+        sudo rpm --import https://brave-browser-rpm-release.s3.brave.com/brave-core.asc
+
+        # Install Brave Browser
+        echo "Installing Brave Browser..."
+        dnf install -y brave-browser
+
+        echo "Brave Browser installation completed."
+    else
+        echo "Installation aborted."
+        exit 1
+    fi
 fi
 
 echo -n "Enter the web address: "
@@ -62,50 +60,51 @@ read iconlocation
 
 echo -n "Does this application require terminal? [Y/N]: "
 read ans
-ans=$(echo "$ans" | tr '[:lower:]' '[:upper:]' | cut -c1 )
+ans=$(echo "$ans" | tr '[:lower:]' '[:upper:]' | cut -c1)
 
-#Setting up terminal variable.
+# Setting up terminal variable
 if [[ "$ans" == "Y" ]]; then
-  ans="true"
+    ans="true"
 else
-  ans="false"
+    ans="false"
 fi
 
 echo -n "Enter categories of app (separated by spaces): "
 read -a categories
 
-#categories are stored in .desktop file with commas in between each field
+# Categories are stored in .desktop file with commas in between each field
 finalcat=""
-for category in "${categories[@]}"
-do
-  finalcat="$finalcat,$category"
+for category in "${categories[@]}"; do
+    finalcat="$finalcat,$category"
 done
 
 # Remove leading comma if any
 finalcat=$(echo "$finalcat" | sed 's/^,//')
 
-#Adding the Icon to Icon folder
+# Adding the icon to icon folder
 mv "$iconlocation" "/usr/share/pixmaps/$nameofapp.png"
 
-#DEBUG CODE
-#echo "Web address: $webadd"
-#echo "Name of application: $nameofapp"
-#echo "Comment: $comment"
-#echo "Icon location: $iconlocation"
-#echo "Require terminal: $ans"
-#echo "Categories: $finalcat"
+# DEBUG CODE
+# echo "Web address: $webadd"
+# echo "Name of application: $nameofapp"
+# echo "Comment: $comment"
+# echo "Icon location: $iconlocation"
+# echo "Require terminal: $ans"
+# echo "Categories: $finalcat"
 
-
-#creation of .desktop entry for webapp.
-#TO-DO - Check if the file exist and make changes accordingly
-echo "[Desktop Entry]" >> "/usr/share/applications/$nameofapp.desktop"
-echo "Name=$nameofapp" >> "/usr/share/applications/$nameofapp.desktop"
-echo "Comment=$comment" >> "/usr/share/applications/$nameofapp.desktop"
-echo "Exec=brave-browser-beta --app=$webadd" >> "/usr/share/applications/$nameofapp.desktop"
-echo "Icon=$nameofapp" >> "/usr/share/applications/$nameofapp.desktop"
-echo "Terminal=$ans" >> "/usr/share/applications/$nameofapp.desktop"
-echo "Type=Application" >> "/usr/share/applications/$nameofapp.desktop"
-echo "Categories=$finalcat" >> "/usr/share/applications/$nameofapp.desktop"
-echo "#do_not_edit_last_line_webtoapp_looks_for_it_in_order_to_make_changes" >> "/usr/share/applications/$nameofapp.desktop"
-echo "#installed_by_webtoapp" >> "/usr/share/applications/$nameofapp.desktop"
+# Creation of .desktop entry for webapp
+# TO-DO - Check if the file exists and make changes accordingly
+desktop_entry="/usr/share/applications/$nameofapp.desktop"
+cat <<EOF > "$desktop_entry"
+[Desktop Entry]
+Name=$nameofapp
+Comment=$comment
+Exec=brave-browser-beta --app=$webadd
+Icon=$nameofapp
+Terminal=$ans
+Type=Application
+Categories=$finalcat
+#do_not_edit_last_line_webtoapp_looks_for_it_in_order_to_make_changes
+#installed_by_webtoapp
+EOF
 
