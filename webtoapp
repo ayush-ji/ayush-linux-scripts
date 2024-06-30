@@ -1,0 +1,102 @@
+#!/bin/bash
+
+if [ "$UID" -eq 0 ]; then
+    echo "You are running as root."
+else
+    echo "You are not running as root."
+    exit 1
+fi
+
+echo "Checking if Brave Browser is installed or not..."
+
+isinstalled=$(rpm -q "brave-browser-beta" | awk '{print $1}')
+
+if [[ "$isinstalled" == "package" ]]; then
+  echo "Looks like Brave Browser is not installed."
+  echo -n "Do you wish to install Brave Browser? Yes/No: "
+  read yesno
+  
+  yesno=$(echo "$yesno" | tr '[:lower:]' '[:upper:]' | cut -c1 )
+  
+  if [[ "$yesno" == "Y" ]]; then
+    # Install dnf plugins core
+    echo "Installing dnf-plugins-core..."
+    dnf install -y dnf-plugins-core
+
+    # Add Brave Browser repository
+    echo "Adding Brave Browser repository..."
+    dnf config-manager --add-repo https://brave-browser-rpm-beta.s3.brave.com/brave-browser-beta.repo
+
+    # Import Brave Browser repository GPG key
+    echo "Importing Brave Browser GPG key..."
+    rpm --import https://brave-browser-rpm-beta.s3.brave.com/brave-core-nightly.asc
+
+    # Install Brave Browser beta
+    echo "Installing Brave Browser beta..."
+    dnf install -y brave-browser-beta
+
+    echo "Brave Browser beta installation completed."
+  else
+    echo "Installation aborted."
+    exit 1
+  fi
+fi
+
+echo "Thank you for checking Brave Browser."
+
+echo -n "Enter the web address: "
+read webadd
+
+echo -n "Enter the name of the application: "
+read nameofapp
+
+echo -n "Enter your comment: "
+read comment
+
+echo -n "Enter the icon location: "
+read iconlocation
+
+echo -n "Does this application require terminal? [Y/N]: "
+read ans
+ans=$(echo "$ans" | tr '[:lower:]' '[:upper:]' | cut -c1 )
+
+if [[ "$ans" == "Y" ]]; then
+  ans="true"
+else
+  ans="false"
+fi
+
+echo -n "Enter categories of app (separated by spaces): "
+read -a categories
+
+finalcat=""
+
+for category in "${categories[@]}"
+do
+  finalcat="$finalcat,$category"
+done
+
+# Remove leading comma if any
+finalcat=$(echo "$finalcat" | sed 's/^,//')
+
+#Adding the Icon to Icon folder
+mv "$iconlocation" "/usr/share/pixmaps/$nameofapp.png"
+
+
+echo "Web address: $webadd"
+echo "Name of application: $nameofapp"
+echo "Comment: $comment"
+echo "Icon location: $iconlocation"
+echo "Require terminal: $ans"
+echo "Categories: $finalcat"
+
+echo "[Desktop Entry]" >> "/usr/share/applications/$nameofapp.desktop"
+echo "Name=$nameofapp" >> "/usr/share/applications/$nameofapp.desktop"
+echo "Comment=$comment" >> "/usr/share/applications/$nameofapp.desktop"
+echo "Exec=brave-browser-beta --app=$webadd" >> "/usr/share/applications/$nameofapp.desktop"
+echo "Icon=$nameofapp" >> "/usr/share/applications/$nameofapp.desktop"
+echo "Terminal=$ans" >> "/usr/share/applications/$nameofapp.desktop"
+echo "Type=Application" >> "/usr/share/applications/$nameofapp.desktop"
+echo "Categories=$finalcat" >> "/usr/share/applications/$nameofapp.desktop"
+
+
